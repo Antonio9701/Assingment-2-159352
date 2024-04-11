@@ -1,0 +1,59 @@
+<!-- Front end or landing page for 159.352 Assignment 1
+     Modify in any way you see fit. Feel free to make it look pretty
+  -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychological Profiling</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Psychological Profiling</h1>
+        <p>Welcome to your psychological profile</p>
+    </header>
+
+    <div class="container">
+        <!-- Display form in a new window -->
+        <button onclick="openForm()">Take Personality Test</button>
+
+        <!-- Display input data -->
+        <h2>Input Data:</h2>
+        <pre id="inputData"></pre>
+
+        <!-- Display profile data -->
+        <h2>Psychological Profile:</h2>
+        <pre id="profileData"></pre>
+
+        <!-- Display pet images -->
+        <h2>Pet Images:</h2>
+        <div id="petImages"></div>
+    </div>
+
+    <script>
+        // Function to open form in a new window
+        function openForm() {
+            window.open('/form', '_blank');
+        }
+
+        // Fetch input data from /view/input
+        fetch('/view/input')
+            .then(response => response.json())
+            .then(data => {
+                // Display input data
+                document.getElementById('inputData').innerText = JSON.stringify(data, null, 2);
+            });
+
+        // Fetch profile data from /view/profile
+        fetch('/view/profile')
+            .then(response => response.json())
+            .then(data => {
+                // Display profile data
+                document.getElementById('profileData').innerText = JSON.stringify(data, null, 2);
+            });
+    </script>
+</body>
+</html>
+
