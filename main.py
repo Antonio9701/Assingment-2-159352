@@ -1,190 +1,282 @@
-import base64
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+import os
+import socket
+import _thread
+import sys
 import requests
 
-VALID_IDS = ['12345678', '87654321']
-OMDB_API_KEY = '7deb6267'
-DOG_API_URL = 'https://dog.ceo/api/breeds/image/random'
-CAT_API_URL = 'https://api.thecatapi.com/v1/images/search'
-DUCK_API_URL = 'https://random-d.uk/api/v2/random'
-user_data = {}
+hsep = '\r\n'
 
 
-def fetch_random_image(url):
+def parse_http(request):
+    reqline = request.decode().split(hsep).pop(0)
     try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            if type(data) is list:
-                return data[0]['url']
-            else:
-                return data['message']
-    except Exception as e:
-        print(f"Error fetching image from {url}: {str(e)}")
-    return None
+        cmd, path, prot = reqline.split()
+    except ValueError:
+        cmd = ''
+        path = ''
+    return cmd, path
 
 
-def fetch_movie_recommendation():
-    query = "your_query"
-    url = f'https://www.omdbapi.com/?apikey={OMDB_API_KEY}&s={query}'
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            if 'Search' in data:
-                return data['Search'][0]['Title']
-    except Exception as e:
-        print(f"Error fetching movie from {url}: {str(e)}")
-    return None
+def http_status(connection, status):
+    connection.send(('HTTP/1.1 ' + status + hsep).encode())
 
 
-def perform_career_assessment(input_data):
-    # collect the list of questions' answers
-    question_data = [int(input_data['question[' + str(i + 1) + ']'][0]) for i in range(20)]
+def deliver_200(connection):
+    http_status(connection, '200 OK')
 
-    # compute mean score
-    mean_score = sum(question_data) // len(question_data)
 
-    # categorize based on this mean_value
-    if mean_score > 3:
-        assessment = "You seem highly ambitious, consider aiming for a leadership role in your career."
-    elif mean_score > 1:
-        assessment = "You have a balanced personality, a collaborative role in projects might be suitable for you."
+def deliver_404(connection):
+    http_status(connection, '404 Not found')
+
+
+def http_header(connection, headerline):
+    connection.send((headerline + hsep).encode())
+
+
+def http_body(connection, payload):
+    connection.send(hsep.encode())
+    connection.send(payload)
+
+
+def gobble_file(filename, binary=False):
+    if binary:
+        mode = 'rb'
     else:
-        assessment = "You seem interested in focused and detailed work, research or specialist roles may fit you."
+        mode = 'r'
+    with open(filename, mode) as fin:
+        content = fin.read()
+    return content
 
-    return assessment
+
+def deliver_html(connection, filename):
+    deliver_200(connection)
+    content = gobble_file(filename)
+    http_header(connection, 'Content-Type: text/html')
+    http_body(connection, content.encode())
 
 
-class MyHTTPHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if not self.authenticate():
-            self.do_AUTHHEAD()
-            self.wfile.write(bytes('Authentication required', 'utf-8'))
-            return
-        parsed_path = urlparse(self.path)
-        if parsed_path.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            with open('index.html', 'rb') as f:
-                self.wfile.write(f.read())
-        elif parsed_path.path == '/style.css':
-            self.serve_static_file('style.css')
-        elif parsed_path.path == '/form':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            with open('psycho.html', 'rb') as f:
-                self.wfile.write(f.read())
-        elif parsed_path.path.startswith('/view/'):
-            _, _, user = parsed_path.path.partition('/view/')
-            user = user.split('/')[0]  # Make sure 'user' is only the username
-            if user in user_data:
-                if '/input' in parsed_path.path:
-                    self.serve_json(user_data[user]['input'])
-                elif '/profile' in parsed_path.path:
-                    self.serve_json(user_data[user]['profile'])
-                elif '/petImages' in parsed_path.path:
-                    self.serve_json(user_data[user]['pet_images'])
-                else:
-                    self.send_error(404, "Unknown view")
+def deliver_jpg(connection, filename):
+    deliver_200(connection)
+    content = gobble_file(filename, binary=True)
+    http_header(connection, 'Content-Type: image/jpg')
+    http_header(connection, 'Accept-Ranges: bytes')
+    http_body(connection, content)
+
+
+def deliver_json_string(connection, jsonstr):
+    deliver_200(connection)
+    http_header(connection, 'Content-Type: application/json')
+    http_body(connection, jsonstr.encode())
+
+
+def deliver_json(connection, filename):
+    content = gobble_file(filename)
+    deliver_json_string(connection, content)
+
+
+def parse_form_data(request):
+    # Split the request into headers and body
+    headers, body = request.decode().split(hsep + hsep, 1)
+
+    # Parse the form data
+    parsed_form_data = {}
+    form_data_pairs = body.split('&')
+    for pair in form_data_pairs:
+        question, answer = pair.split('=')
+        if question.startswith("question"):
+            # Extract the question number and value from the question parameter
+            question_number = (question.split("%5B")[1].split("%5D")[0])
+            parsed_form_data[question_number] = int(answer)
+        elif question.startswith(("message", "residence", "birthplace", "name")):
+            parsed_form_data[question] = answer.replace('+', ' ')
+        elif question.startswith("pets"):
+            # Append the pet value to the pets array in parsed_form_data
+            if "pets" not in parsed_form_data:
+                parsed_form_data["pets"] = []
+            parsed_form_data["pets"].append(answer)
+        else:
+            parsed_form_data[question] = answer
+
+    with open("input.json", "w") as file:
+        json.dump(parsed_form_data, file)
+
+
+def calculate_job_scores(responses, job_scores):
+    job_scores_total = {}
+    for job, scores in job_scores.items():
+        total = sum(responses.get(str(i), 0) * score for i, score in enumerate(scores, 1))
+        job_scores_total[job] = total
+    return job_scores_total
+
+
+def determine_best_job(job_scores_total):
+    return max(job_scores_total, key=job_scores_total.get)
+
+
+def calculate_suitability(desired_job, job_scores_total):
+    return sum(1 for total in job_scores_total.values() if total > job_scores_total[desired_job])
+
+
+def fetch_movie_data(desired_job, apis):
+    movie_uri = apis.get(desired_job)
+    if movie_uri:
+        response = requests.get(movie_uri)
+        return json.loads(response.text)
+    else:
+        return None
+
+
+def download_pet_images(data, apis):
+    pet_images = []
+    for pet in data.get("pets", []):
+        uri = apis.get(pet)
+        if uri:
+            response = requests.get(uri)
+            image_data = json.loads(response.text)
+            if pet == 'dog':
+                image_uri = image_data.get('message')
+            elif pet == 'cat':
+                image_uri = image_data[0].get('url')
             else:
-                self.serve_json({"message": f"No data available for user {user}"})
-        else:
-            self.send_error(404)
+                image_uri = image_data.get('url')
+            if image_uri:
+                response = requests.get(image_uri)
+                filename = os.path.basename(image_uri)
+                with open(filename, "wb") as f:
+                    f.write(response.content)
+                pet_images.append({"name": pet, "image": filename})
+    return pet_images
 
-    def do_POST(self):
-        if not self.authenticate():
-            self.do_AUTHHEAD()
-            self.wfile.write(bytes('Authentication required', 'utf-8'))
-            return
-        if self.path == '/analysis':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length).decode('utf-8')
-            form_data = parse_qs(post_data)
-            name = form_data.get('name', [''])[0]
-            gender = form_data.get('gender', [''])[0]
-            pets = form_data.get('pets', [])
-            profile = {
-                'name': name,
-                'gender': gender,
-                'career_assessment': perform_career_assessment(form_data),
-                'movie_recommendation': fetch_movie_recommendation()
-            }
-            pet_images = {}
-            for pet in pets:
-                if pet == 'dog':
-                    image_url = fetch_random_image(DOG_API_URL)
-                elif pet == 'cat':
-                    image_url = fetch_random_image(CAT_API_URL)
-                elif pet == 'duck':
-                    image_url = fetch_random_image(DUCK_API_URL)
-                pet_images[pet] = image_url
-            global user_data
-            user_data[name] = {
-                'input': form_data,
-                'profile': profile,
-                'pet_images': pet_images
-            }
-            response_data = {'message': 'Profile generated successfully'}
-            print("User Data:", user_data)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response_data).encode('utf-8'))
-        else:
-            self.send_error(404)
 
-    def do_AUTHHEAD(self):
-        self.send_response(401)
-        self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
+def analyze():
+    with open('input.json') as f:
+        data = json.load(f)
 
-    def authenticate(self):
-        if 'Authorization' in self.headers:
-            auth_header = self.headers['Authorization']
-            credentials = auth_header.split(' ')[1]
-            username, password = base64.b64decode(credentials).decode('utf-8').split(':')
-            if username in VALID_IDS and username == password:
-                return True
+    responses = {k: v for k, v in data.items() if isinstance(v, int)}
+
+    job_scores = {
+        "ceo": [1, 2, 4, 1, 1, 4, 1, 1, 4, 1, 3, 1, 3, 1, 4, 3, 4, 4, 1, 1],
+        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 4, 2, 4, 2, 2, 4, 3],
+        "doctor": [2, 3, 4, 5, 1, 5, 2, 5, 2, 4, 1, 2, 4, 4, 2, 3, 2, 2, 4, 4],
+        "model": [2, 1, 2, 1, 3, 1, 3, 2, 1, 1, 3, 2, 3, 3, 4, 1, 4, 3, 1, 1],
+        "rockstar": [3, 2, 3, 1, 3, 1, 3, 3, 2, 2, 1, 2, 1, 1, 3, 1, 3, 2, 1, 2],
+        "refuse": [1, 1, 1, 2, 4, 2, 2, 4, 2, 1, 4, 4, 4, 4, 1, 4, 2, 1, 3, 3],
+    }
+
+    apis = {
+        "dog": "https://dog.ceo/api/breeds/image/random",
+        "cat": "https://api.thecatapi.com/v1/images/search",
+        "duck": "https://random-d.uk/api/v2/random",
+        "ceo": "https://www.omdbapi.com/?apikey=ab374535&t=the+founder",
+        "astronaut": "https://www.omdbapi.com/?apikey=ab374535&t=the+martian",
+        "doctor": "https://www.omdbapi.com/?apikey=ab374535&t=patch+adams",
+        "model": "https://www.omdbapi.com/?apikey=ab374535&t=zoolander",
+        "rockstar": "https://www.omdbapi.com/?apikey=ab374535&t=YESTERDAY",
+        "refuse": "https://www.omdbapi.com/?apikey=ab374535&t=MEN+AT+WORK"
+    }
+
+    job_scores_total = calculate_job_scores(responses, job_scores)
+    best_job = determine_best_job(job_scores_total)
+    desired_job = data.get('job')
+    suitability = calculate_suitability(desired_job, job_scores_total)
+    movie_data = fetch_movie_data(desired_job, apis)
+    pet_images = download_pet_images(data, apis)
+
+    profile = {
+        'desired_job': desired_job,
+        'best_suited_job': best_job,
+        'suitability_for_chosen_job': suitability,
+        'movie': movie_data,
+        'pets': pet_images
+    }
+
+    with open("profile.json", "w") as file:
+        json.dump(profile, file)
+
+
+def parse_authentication(request):
+    headers = request.decode().split('\r\n')
+    for header in headers:
+        if header.startswith('Authorization:'):
+            return header.split(' ')[-1]
+
+
+def authenticate(connection, request):
+    key = parse_authentication(request)
+    correct_key = 'MjEwMDA4MDI6MjEwMDA4MDI='
+    if key == correct_key:
+        return True
+    else:
+        connection.send(b'HTTP/1.1 401 Unauthorized\r\n')
+        # Request to authenticate
+        connection.send(b'WWW-Authenticate: Basic realm="Web 159352"')
+        connection.send(b'\r\n')
         return False
 
-    def serve_json(self, data):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
 
-    def serve_static_file(self, path):
-        try:
-            with open(path, 'rb') as f:
-                self.send_response(200)
-                if path.endswith('.css'):
-                    self.send_header('Content-type', 'text/css')
-                else:
-                    self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(f.read())
-        except FileNotFoundError:
-            self.send_error(404)
+# request handler
+def do_request(connectionSocket):
+    # Extract just the HTTP command (method) and path from the request
+    request = connectionSocket.recv(20240)
+    cmd, path = parse_http(request)
+
+    if cmd == 'GET':
+        sign_in_status = authenticate(connectionSocket, request)
+        if sign_in_status:
+            if path == '/':
+                deliver_html(connectionSocket, 'index.html')
+            elif path == '/form':
+                deliver_html(connectionSocket, 'psycho.html')
+            elif path == '/view/input':
+                deliver_json(connectionSocket, 'input.json')
+            elif path == '/view/profile':
+                deliver_json(connectionSocket, 'profile.json')
+            elif path == '/input.json':
+                deliver_json(connectionSocket, path.strip('/'))
+            elif path == '/profile.json':
+                deliver_json(connectionSocket, path.strip('/'))
+            elif path.endswith('.jpg'):
+                deliver_jpg(connectionSocket, path.strip('/'))
+            else:
+                deliver_404(connectionSocket)
+    elif cmd == 'POST':
+        sign_in_status = authenticate(connectionSocket, request)
+        if sign_in_status:
+            if path == '/analysis':
+                parse_form_data(request)
+                analyze()
+                deliver_200(connectionSocket)
+            else:
+                deliver_404(connectionSocket)
+
+    # Close the connection
+    connectionSocket.close()
 
 
-def run():
-    host = 'localhost'
-    port = 8000
-    server_address = (host, port)
-    httpd = HTTPServer(server_address, MyHTTPHandler)
-    print(f'Starting server on {host}:{port}')
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print('\nKeyboard interrupt received, shutting down the server')
-        httpd.server_close()
+def main(serverPort):
+    # Create the server socket object
+    mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    mySocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    # Bind the server socket to the port
+    mySocket.bind(('', serverPort))
+
+    # Start listening for new connections
+    mySocket.listen()
+
+    while True:
+        # Accept a connection from a client
+        connectionSocket, addr = mySocket.accept()
+
+        # Handle each connection in a separate thread
+        _thread.start_new_thread(do_request, (connectionSocket,))
 
 
 if __name__ == '__main__':
-    run()
+    if len(sys.argv) > 1:
+        serverPort = int(sys.argv[1])
+    else:
+        serverPort = 8080
+
+    main(serverPort)
