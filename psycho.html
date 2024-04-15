@@ -1,41 +1,53 @@
 <!-- HTML page for classical form input for 159.352 Assignment 1-->
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <title>Personality Test</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-<h1>Online Personality Test<br>
-</h1>
+<h1>Online Personality Test<br></h1>
 
 <!-- Set the appropriate action -->
-<form method="post" action="" name="">
+<form method="post" action="/analysis" name="personalityTestForm" onsubmit="formSubmit(event)">
 
 <p><input type="submit" name="submit" value="Submit">
 <input type="reset" name="reset" value="Clear"> </p>
 
 <table>
   <tr>
-<td><b>Input your name</b></td>
-<td><input type="text" name="name" size="25"></td>
+    <td><b>Input your name</b></td>
+    <td><label>
+      <input type="text" name="name" size="25">
+    </label></td>
   </tr>
-<tr>  
-<td><b>What is your gender?</b></td>
-<td><input type="radio" name="gender" value="M">Male
-<input type="radio" name="gender" value="F">Female</td>
-</tr>
-<tr>
-<td><b>In what year were you born?</b></td>
-<td><input type="text" name="birthyear" size="25"></td>
-</tr>
-<tr>
-<td><b>What is the country of your birth?</b></td>
-<td><input type="text" name="birthplace" size="25"></td>
-</tr>
-<tr>
-<td><b>What country do you live in now?</b></td>
-<td><input type="text" name="residence" size="25"></td>
-</tr>
+  <tr>
+    <td><b>What is your gender?</b></td>
+    <td><label>
+      <input type="radio" name="gender" value="M">
+    </label>Male
+      <label>
+        <input type="radio" name="gender" value="F">
+      </label>Female</td>
+  </tr>
+  <tr>
+    <td><b>In what year were you born?</b></td>
+    <td><label>
+      <input type="text" name="birthyear" size="25">
+    </label></td>
+  </tr>
+  <tr>
+    <td><b>What is the country of your birth?</b></td>
+    <td><label>
+      <input type="text" name="birthplace" size="25">
+    </label></td>
+  </tr>
+  <tr>
+    <td><b>What country do you live in now?</b></td>
+    <td><label>
+      <input type="text" name="residence" size="25">
+    </label></td>
+  </tr>
 </table>
 
 <p><hr noshade size=2>
@@ -83,27 +95,41 @@ putquestion("likes to work in a team", 20)
 <p><hr noshade size=2>
 
 <p><b>Which of these jobs would be most appealing to you?</b><br/>
-<select name=job>
-<option value="ceo">CEO of large mega-corporation<br/>
-<option value="astronaut">Astronaut<br/>
-<option value="doctor">Medical doctor<br/>
-<option value="model">Fashion model<br/>
-<option value="rockstar">Rock star<br/>
-<option value="garbage">Refuse collection operative<br/>
-</select>
+  <label>
+    <select name="job">
+      <option value="ceo">CEO of large mega-corporation</option>
+      <option value="astronaut">Astronaut</option>
+      <option value="doctor">Medical doctor</option>
+      <option value="model">Fashion model</option>
+      <option value="rockstar">Rock star</option>
+      <option value="garbage">Refuse collection operative</option>
+    </select>
+  </label>
 
-<p><hr noshade size=2>
+  <p><hr noshade size=2>
 
 <p><b>Which of these animals would appeal to you as a pet?</b><br/>
-<input type=checkbox name=pets[] value="dog">Dog<br/>
-<input type=checkbox name=pets[] value="cat">Cat<br/>
-<input type=checkbox name=pets[] value="duck">Duck<br/>
+  <label>
+    <input type="checkbox" name="pets[]" value="dog">
+  </label>Dog<br/>
+  <label>
+    <input type="checkbox" name="pets[]" value="cat">
+  </label>Cat<br/>
+  <label>
+    <input type="checkbox" name="pets[]" value="duck">
+  </label>Duck<br/>
 
 <p><b>Enter a message or comment if you have one.</b><br/>
-<textarea name="message" cols="60" rows="6"></textarea>
-<br/><br/>
+  <label>
+    <textarea name="message" cols="60" rows="6"></textarea>
+  </label>
+  <br/><br/>
 
 </form>
-
+<script>
+function formSubmit(e) {
+    localStorage.setItem('username', e.target.name.value);
+}
+</script>
 </body>
 </html>

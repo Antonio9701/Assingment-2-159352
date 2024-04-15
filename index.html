@@ -1,6 +1,3 @@
-<!-- Front end or landing page for 159.352 Assignment 1
-     Modify in any way you see fit. Feel free to make it look pretty
-  -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,30 +27,63 @@
         <!-- Display pet images -->
         <h2>Pet Images:</h2>
         <div id="petImages"></div>
+
+        <!-- Display message if the user hasn't taken the test -->
+        <p id="noDataMessage"></p>
     </div>
 
     <script>
+        let username = localStorage.getItem('username');
+        if (username) username = username.trim();
+
         // Function to open form in a new window
         function openForm() {
             window.open('/form', '_blank');
         }
 
-        // Fetch input data from /view/input
-        fetch('/view/input')
-            .then(response => response.json())
-            .then(data => {
-                // Display input data
-                document.getElementById('inputData').innerText = JSON.stringify(data, null, 2);
-            });
+        // Function to fetch and display pet images
+        function fetchPetImages() {
+            fetch(`/view/${username}/petImages`)
+                // rest of the function
+        }
 
-        // Fetch profile data from /view/profile
-        fetch('/view/profile')
-            .then(response => response.json())
-            .then(data => {
-                // Display profile data
-                document.getElementById('profileData').innerText = JSON.stringify(data, null, 2);
-            });
+        // Function to fetch and display input data and profile data
+        // Function to fetch and display input data and profile data
+function fetchData() {
+    // Fetch input data
+    fetch(`/view/${username}/input`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Fetched Input data: ", data);
+            document.getElementById('inputData').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+
+    // Fetch profile data
+    fetch(`/view/${username}/profile`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Fetched Profile data: ", data);
+            document.getElementById('profileData').textContent = JSON.stringify(data, null, 2);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+
+    // Fetch pet images
+    fetchPetImages();
+}
+
+        // Call fetchData function after DOM content is loaded
+        if (username) {
+            // Load data only if username is found
+            document.addEventListener('DOMContentLoaded', fetchData);
+        } else {
+            // Display a message instructing the user to take the test first if no username is found
+            document.getElementById('noDataMessage').innerText = "No data available. Please take the personality test first.";
+        }
     </script>
 </body>
 </html>
-
