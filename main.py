@@ -192,7 +192,7 @@ def parse_form_data(request):
 
 
 def extract_responses(data: Dict[str, Any]) -> Dict[str, str]:
-    return {k: v for k, v in data.items() if isinstance(v, str) and v.startswith("is ")}
+    return {k: v for k, v in data.items() if isinstance(k, str) and k.isdigit()}
 
 
 def calculate_job_scores(responses: Dict[str, str], job_scores: Dict[str, List[int]]) -> Dict[str, int]:
@@ -220,6 +220,7 @@ def calculate_suitability(desired_job: str, job_scores_total: Dict[str, int]) ->
 
     return suitability
 
+
 # # Define question categories
 # question_categories = {
 #     "Communication skills": ["is talkative", "tends to be quiet", "sometimes shy"],
@@ -235,21 +236,25 @@ def calculate_suitability(desired_job: str, job_scores_total: Dict[str, int]) ->
 
 def load_job_scores() -> Dict[str, List[int]]:
     return {
-        "ceo": [1, 2, 4, 1, 1, 4, 1, 2, 4, 1, 3, 1, 3, 2, 4, 3, 4, 4, 1, 1],
-        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 3, 2, 4, 2, 2, 4, 3],
-        "doctor": [2, 3, 3, 3, 1, 3, 2, 3, 2, 4, 1, 2, 3, 3, 2, 3, 2, 2, 4, 3],
-        "model": [2, 1, 2, 1, 2, 2, 3, 2, 1, 1, 3, 2, 3, 3, 4, 2, 4, 3, 1, 1],
-        "rockstar": [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 1, 2, 2, 2, 3, 2, 3, 2, 2, 2],
-        "refuse": [1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 4, 3, 3, 4, 1, 3, 3, 1, 3, 3]
+        "ceo": [3, 2, 4, 1, 2, 2, 1, 2, 5, 3, 2, 3, 2, 2, 5, 3, 3, 4, 3, 3],
+        "astronaut": [2, 3, 3, 2, 2, 2, 4, 1, 2, 3, 4, 4, 2, 4, 3, 2, 2, 3, 3, 4],
+        "doctor": [2, 4, 2, 3, 2, 3, 1, 3, 2, 2, 1, 3, 3, 1, 2, 2, 4, 1, 2, 3],
+        "model": [4, 1, 2, 1, 3, 2, 2, 3, 1, 2, 3, 1, 1, 3, 5, 3, 3, 2, 2, 1],
+        "rockstar": [3, 1, 3, 1, 3, 3, 3, 4, 1, 3, 3, 2, 4, 5, 2, 3, 2, 3, 2, 3],
+        "refuse": [2, 3, 1, 5, 4, 3, 5, 3, 3, 4, 4, 1, 3, 3, 1, 4, 3, 3, 2, 2]
     }
 
 
 def analyze(data_filename: str, profile_filename: str):
     data = load_data(data_filename)
+    # print(data)
     responses = extract_responses(data)
+    # print(responses)
     job_scores = load_job_scores()
+    # print(job_scores)
     desired_job = data.get('job')
-    apis = {
+    # print(desired_job)
+    api_endpoints = {
         "dog": "https://dog.ceo/api/breeds/image/random",
         "cat": "https://api.thecatapi.com/v1/images/search",
         "duck": "https://random-d.uk/api/v2/random",
@@ -262,10 +267,14 @@ def analyze(data_filename: str, profile_filename: str):
     }
 
     job_scores_total = calculate_job_scores(responses, job_scores)
+    # print(job_scores_total)
     best_job = determine_best_job(job_scores_total)
+    # print(best_job)
     suitability = calculate_suitability(desired_job, job_scores_total)
-    movie_data = fetch_movie_data(desired_job, apis)
-    pet_images = download_pet_images(data.get("pets", []), apis)
+    # print(suitability)
+    movie_data = fetch_movie_data(desired_job, api_endpoints)
+    # print(movie_data)
+    pet_images = download_pet_images(data.get("pets", []), api_endpoints)
 
     profile = {
         'desired_job': desired_job,
@@ -275,10 +284,10 @@ def analyze(data_filename: str, profile_filename: str):
         'pets': pet_images
     }
 
-    print(f"Writing profile information to {profile_filename}...")
+    # print(f"Writing profile information to {profile_filename}...")
     with open(profile_filename, "w") as file:
         json.dump(profile, file)
-    print(f"Data written to {profile_filename}")
+    # print(f"Data written to {profile_filename}")
 
 
 def parse_authentication(request):
