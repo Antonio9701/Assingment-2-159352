@@ -1,7 +1,7 @@
+import _thread
 import json
 import os
 import socket
-import _thread
 import sys
 from typing import List, Dict, Optional, Any
 
@@ -20,22 +20,28 @@ class HTTPrequest:
 
 
 def parse_http_request(request):
-    # Parses the http_request inorder to use later
+    # Parse the http_request in order to use later
     headers = request.decode().split('\r\n')
     reqline = headers.pop(0)
-    payload = headers.pop()
-    headers_dict = {}
+    payload = ''
+    if headers:
+        payload = headers.pop()
 
+    headers_dict = {}
     for header in headers:
         if header != '':
             k, v = header.split(': ')
             headers_dict[k] = v
-    try:
-        cmd, path, prot = reqline.split()
-    except ValueError:
-        cmd = ''
-        path = ''
-        payload = ''
+
+    # Default values for cmd and path
+    cmd, path = '', ''
+
+    # ensure reqline is not an empty string before splitting
+    if reqline:
+        try:
+            cmd, path, prot = reqline.split()
+        except ValueError:
+            pass  # maintain default cmd and path if ValueError occurs
 
     return HTTPrequest(cmd, path, headers_dict, payload)
 
@@ -111,61 +117,6 @@ def load_data(filename: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def parse_form_data(request):
-    # Split the request into headers and body
-    headers, body = request.decode().split(http_separator + http_separator, 1)
-
-    # Parse the form data
-    parsed_form_data = {}
-    form_data_pairs = body.split('&')
-    for pair in form_data_pairs:
-        question, answer = pair.split('=')
-        if question.startswith("question"):
-            # Extract the question number and value from the question parameter
-            question_number = (question.split("%5B")[1].split("%5D")[0])
-            parsed_form_data[question_number] = int(answer)
-        elif question.startswith(("message", "residence", "birthplace", "name")):
-            parsed_form_data[question] = answer.replace('+', ' ')
-        elif question.startswith("pets"):
-            # Append the pet value to the pets array in parsed_form_data
-            if "pets" not in parsed_form_data:
-                parsed_form_data["pets"] = []
-            parsed_form_data["pets"].append(answer)
-        else:
-            parsed_form_data[question] = answer
-
-
-def extract_responses(data: Dict[str, Any]) -> Dict[str, int]:
-    return {k: v for k, v in data.items() if isinstance(v, int)}
-
-
-def calculate_job_scores(responses: Dict[str, int], job_scores: Dict[str, List[int]]) -> Dict[str, int]:
-    job_scores_total = {}
-    for job, scores in job_scores.items():
-        total = sum(responses.get(str(i), 0) * score for i, score in enumerate(scores, 1))
-        job_scores_total[job] = total
-    return job_scores_total
-
-
-def determine_best_job(job_scores_total: Dict[str, int]) -> str:
-    return max(job_scores_total, key=job_scores_total.get)
-
-
-def calculate_suitability(desired_job: str, job_scores_total: Dict[str, int]) -> int:
-    return sum(1 for total in job_scores_total.values() if total > job_scores_total[desired_job])
-
-
-def load_job_scores() -> Dict[str, List[int]]:
-    return {
-        "ceo": [1, 2, 4, 1, 1, 4, 1, 2, 4, 1, 3, 1, 3, 2, 4, 3, 4, 4, 1, 1],
-        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 3, 2, 4, 2, 2, 4, 3],
-        "doctor": [2, 3, 3, 3, 1, 3, 2, 3, 2, 4, 1, 2, 3, 3, 2, 3, 2, 2, 4, 3],
-        "model": [2, 1, 2, 1, 2, 2, 3, 2, 1, 1, 3, 2, 3, 3, 4, 2, 4, 3, 1, 1],
-        "rockstar": [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 1, 2, 2, 2, 3, 2, 3, 2, 2, 2],
-        "refuse": [1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 4, 3, 3, 4, 1, 3, 3, 1, 3, 3]
-    }
-
-
 def fetch_data(uri: str) -> Optional[Dict[str, Any]]:
     response = requests.get(uri)
     if response.ok:
@@ -210,6 +161,89 @@ def download_pet_images(pets: List[str], apis: Dict[str, str]) -> List[Dict[str,
     return pet_images
 
 
+def parse_form_data(request):
+    print("Raw data: ", request)  # Print raw data
+
+    # Split the request into headers and body
+    headers, body = request.decode().split(http_separator + http_separator, 1)
+
+    # Parse the form data
+    parsed_form_data = {}
+    form_data_pairs = body.split('&')
+    for pair in form_data_pairs:
+        question, answer = pair.split('=')
+        if question.startswith("question"):
+            # Extract the question number and value from the question parameter
+            question_number = (question.split("%5B")[1].split("%5D")[0])
+            parsed_form_data[question_number] = int(answer)
+        elif question.startswith(("message", "residence", "birthplace", "name")):
+            parsed_form_data[question] = answer.replace('+', ' ')
+        elif question.startswith("pets"):
+            # Append the pet value to the pets array in parsed_form_data
+            if "pets" not in parsed_form_data:
+                parsed_form_data["pets"] = []
+            parsed_form_data["pets"].append(answer)
+        else:
+            parsed_form_data[question] = answer
+
+    print("Parsed data: ", parsed_form_data)  # Print parsed data
+
+    return parsed_form_data
+
+
+def extract_responses(data: Dict[str, Any]) -> Dict[str, str]:
+    return {k: v for k, v in data.items() if isinstance(v, str) and v.startswith("is ")}
+
+
+def calculate_job_scores(responses: Dict[str, str], job_scores: Dict[str, List[int]]) -> Dict[str, int]:
+    total_scores = {}
+
+    for job, scores in job_scores.items():
+        score = sum(int(responses.get(question, 0)) * weight for question, weight in zip(responses.keys(), scores))
+        total_scores[job] = score
+
+    return total_scores
+
+
+def determine_best_job(job_scores_total: Dict[str, int]) -> str:
+    return max(job_scores_total, key=job_scores_total.get)
+
+
+def calculate_suitability(desired_job: str, job_scores_total: Dict[str, int]) -> int:
+    desired_job_score = job_scores_total.get(desired_job, 0)
+    suitability = 6
+
+    # Decrease suitability for each job that's worse than the desired job
+    for total in job_scores_total.values():
+        if total > desired_job_score:
+            suitability -= 1
+
+    return suitability
+
+# # Define question categories
+# question_categories = {
+#     "Communication skills": ["is talkative", "tends to be quiet", "sometimes shy"],
+#     "Work ethics": ["does a thorough job", "can be somewhat careless", "is a reliable worker",
+#                     "tends to be disorganized", "tends to be lazy", "likes to work in a team"],
+#     "Stress management": ["is relaxed, handles stress well", "worries a lot", "gets nervous easily"],
+#     "Creativity & curiosity": ["is original, comes up with new ideas", "is curious about many things",
+#                                "is a deep thinker"],
+#     "Interpersonal skills": ["is helpful, unselfish with others", "starts quarrels with others",
+#                              "is sometimes rude to others", "tends to find fault with others"]
+# }
+
+
+def load_job_scores() -> Dict[str, List[int]]:
+    return {
+        "ceo": [1, 2, 4, 1, 1, 4, 1, 2, 4, 1, 3, 1, 3, 2, 4, 3, 4, 4, 1, 1],
+        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 3, 2, 4, 2, 2, 4, 3],
+        "doctor": [2, 3, 3, 3, 1, 3, 2, 3, 2, 4, 1, 2, 3, 3, 2, 3, 2, 2, 4, 3],
+        "model": [2, 1, 2, 1, 2, 2, 3, 2, 1, 1, 3, 2, 3, 3, 4, 2, 4, 3, 1, 1],
+        "rockstar": [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 1, 2, 2, 2, 3, 2, 3, 2, 2, 2],
+        "refuse": [1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 4, 3, 3, 4, 1, 3, 3, 1, 3, 3]
+    }
+
+
 def analyze(data_filename: str, profile_filename: str):
     data = load_data(data_filename)
     responses = extract_responses(data)
@@ -241,8 +275,10 @@ def analyze(data_filename: str, profile_filename: str):
         'pets': pet_images
     }
 
+    print(f"Writing profile information to {profile_filename}...")
     with open(profile_filename, "w") as file:
         json.dump(profile, file)
+    print(f"Data written to {profile_filename}")
 
 
 def parse_authentication(request):
@@ -291,11 +327,17 @@ def do_request(connectionSocket):
                 deliver_jpg(connectionSocket, path.strip('/'))
             else:
                 deliver_404(connectionSocket)
+
     elif cmd == 'POST':
         sign_in_status = authenticate(connectionSocket, request)
         if sign_in_status:
             if path == '/analysis':
-                parse_form_data(request)
+                parsed_data = parse_form_data(request)
+
+                # Write parsed data to 'input.json'
+                with open('input.json', 'w') as f:
+                    json.dump(parsed_data, f)
+
                 analyze('input.json', 'profile.json')
                 deliver_200(connectionSocket)
             else:
