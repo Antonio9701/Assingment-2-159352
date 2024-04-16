@@ -3,246 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="index.css">
     <title>Psychological Profiling</title>
-    <style>
-  div.responses p {
-    color: #007BFF;
-    font-size: 1.2em;
-    margin: 10px 0;
-}
-
-/* Styling the input fields */
-input[type=text], select {
-    width: 100%;
-    margin: 8px 0;
-    padding: 12px 20px;
-    box-sizing: border-box;
-    border: 3px solid #007BFF;
-    border-radius: 4px;
-    resize: vertical;
-}
-  #results {
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  padding:25px;
-  border-radius:10px;
-  background-color: #f2f2f2;
-  box-shadow: 0px 0px 10px -1px #000;
-}
-
-#results p {
-  text-align: center;
-  margin:20px;
-  padding:10px;
-  font-size:1.2em;
-  color:#007BFF;
-  border-radius:5px;
-}
-
-
-        body {
-    background: #F3F3F3;
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    color: #444;
-  }
-
-    h1 {
-    font-size: 2.5em;
-    margin: 20px 0;
-    text-align: center;
-    width: 100%;
-  }
-
-  p {
-    font-size: 1.2em;
-    margin-bottom: 20px;
-  }
-
-  button {
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    padding: 15px 32px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 1em;
-    margin: 4px 2px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition-duration: 0.4s;
-  }
-
-  button:hover {
-    background-color: #0056b3;
-    color: white;
-  }
-
-  div {
-    border-radius: 5px;
-    background-color: #f2f2f2;
-    padding: 20px;
-    margin-top: 20px;
-  }
-
-  canvas {
-    display: block;
-    margin: 20px auto;
-  }
-
-  p.welcome {
-    font-size: 1.5em;
-    text-align: center;
-    color: #007BFF;
-    font-weight: bold;
-    margin-top: 20px;
-  }
-
-</style>
 </head>
 <body>
 
-    <h1>Psychological Profiling</h1>
+<h1>Psychological Profiling</h1>
 
-    <p class="welcome">Welcome to your psychological profile</p>
+<p class="welcome">Welcome to your psychological profile</p>
 
-    <!-- Put in various widgets as appropriate -->
-    <button type="button" onclick="new_window()">Fetch form</button>
-    <button type="button" onclick="view_input()">View input</button>
-    <button type="button" onclick="view_results()">View results</button>
 
-    <div id="questions" style="display: none">
-        <p id="name"></p>
-        <p id="gender"></p>
-        <p id="birthyear"></p>
-        <p id="birthplace"></p>
-        <p id="residence"></p>
-        <p id="q1">is talkative: </p>
-        <p id="q2">does a thorough job: </p>
-        <p id="q3">is original, comes up with new ideas: </p>
-        <p id="q4">is helpful, unselfish with others: </p>
-        <p id="q5">can be somewhat careless: </p>
-        <p id="q6">is relaxed, handles stress well: </p>
-        <p id="q7">is curious about many things: </p>
-        <p id="q8">is full of energy: </p>
-        <p id="q9">starts quarrels with others: </p>
-        <p id="q10">is a reliable worker: </p>
-        <p id="q11">is a deep thinker: </p>
-        <p id="q12">tends to be disorganized: </p>
-        <p id="q13">worries a lot: </p>
-        <p id="q14">tends to be quiet: </p>
-        <p id="q15">tends to be lazy: </p>
-        <p id="q16">sometimes shy: </p>
-        <p id="q17">is sometimes rude to others: </p>
-        <p id="q18">tends to find fault with others: </p>
-        <p id="q19">gets nervous easily: </p>
-        <p id="q20">likes to work in a team: </p>
-        <p id="job"></p>
-        <p id="pet"></p>
-        <p id="message"></p>
-    </div>
+<button type="button" onclick="open_new_win()">Fetch form</button>
+<button type="button" onclick="Users_Input()">View input</button>
+<button type="button" onclick="Analyses()">View results</button>
 
-    <div id="results" style="display: none">
-        <p id="desired_job"></p>
-        <p id="suitability"></p>
-        <p id="best_job"></p>
-        <p id="movie"></p>
-        <canvas id="canvas"></canvas>
-    </div>
+<div id="questions" style="display: none">
+<p id="name"></p>
+<p id="gender"></p>
+<p id="birthyear"></p>
+<p id="birthplace"></p>
+<p id="residence"></p>
+<p id="q1">is talkative: </p>
+<p id="q2">does a thorough job: </p>
+<p id="q3">is original, comes up with new ideas: </p>
+<p id="q4">is helpful, unselfish with others: </p>
+<p id="q5">can be somewhat careless: </p>
+<p id="q6">is relaxed, handles stress well: </p>
+<p id="q7">is curious about many things: </p>
+<p id="q8">is full of energy: </p>
+<p id="q9">starts quarrels with others: </p>
+<p id="q10">is a reliable worker: </p>
+<p id="q11">is a deep thinker: </p>
+<p id="q12">tends to be disorganized: </p>
+<p id="q13">worries a lot: </p>
+<p id="q14">tends to be quiet: </p>
+<p id="q15">tends to be lazy: </p>
+<p id="q16">sometimes shy: </p>
+<p id="q17">is sometimes rude to others: </p>
+<p id="q18">tends to find fault with others: </p>
+<p id="q19">gets nervous easily: </p>
+<p id="q20">likes to work in a team: </p>
+<p id="job"></p>
+<p id="pet"></p>
+<p id="message"></p>
+</div>
 
-    <script>
-        function new_window() {
-    const uri = window.location.href + "form";
-    const config = "toolbar=no";  // new separate window
-    const win = window.open(uri, "", config);
-  }
+<div id="results" style="display: none">
+<p id="desired_job"></p>
+<p id="suitability"></p>
+<p id="best_job"></p>
+<p id="movie"></p>
+<canvas id="canvas"></canvas>
+</div>
 
-  function view_input() {
-    let xmlhttp = new XMLHttpRequest()
-      xmlhttp.onload = function () {
-
-        const input = JSON.parse(xmlhttp.responseText);
-        document.getElementById("name").innerHTML = "Input your name: " + input['name'];
-        document.getElementById("gender").innerHTML = "What is your gender? " + input['gender'];
-        document.getElementById("birthyear").innerHTML = "In what year were you born? " + input['birthyear'];
-        document.getElementById("birthplace").innerHTML = "What is the country of your birth? " + input['birthplace'];
-        document.getElementById("residence").innerHTML = "What country do you live in now? " + input['residence'];
-
-        for (let i = 1; i <= 20; i++) {
-          const question = `q${i}`;
-          const answer = input[i];
-          const answerElem = document.getElementById(question);
-          answerElem.innerHTML = answerElem.innerHTML.replace(/\d/g, '');
-          answerElem.innerHTML += answer;
-          }
-
-        document.getElementById("job").innerHTML = "Which of these jobs would be most appealing to you? " + input['job']
-        document.getElementById("pet").innerHTML = "Which of these animals would appeal to you as a pet? " + input['pets']
-        document.getElementById("message").innerHTML = "Enter a message or comment if you have one: " + input['message'];
-
-        const questionsContainer = document.getElementById("questions");
-        questionsContainer.style.display = questionsContainer.style.display === "none" ? "block" : "none";
-        const resultsContainer = document.getElementById("results");
-        resultsContainer.style.display = "none"; // Add this line to hide the results container
-      }
-      xmlhttp.open("GET", "input.json", true);
-      xmlhttp.send();
-  }
-
-function view_results() {
-  let xmlhttp = new XMLHttpRequest();
-  xmlhttp.onload = function () {
-
-    const input = JSON.parse(xmlhttp.responseText);
-    document.getElementById("desired_job").innerHTML = "You chose '" + input['desired_job'] + "' as your desired job";
-    document.getElementById("suitability").innerHTML = "Our algorithm has calculated your suitability for this " +
-      "job as " + input["suitability_for_chosen_job"] + "/5";
-    document.getElementById("best_job").innerHTML = "Based on your results of our personality test, we have " +
-      "concluded that the most suitable job for you is '" + input["best_suited_job"] +"'";
-    document.getElementById("movie").innerHTML = "Because you selected '" + input['desired_job'] + "' as your " +
-      "desired job, we believe this movie may be of interest to you: " + input.movie.Title + " - " +
-      input.movie.Plot;
-
-    const canvas = document.getElementById("canvas");
-    canvas.width = 600; // Set the canvas width to a fixed size
-    canvas.height = 400; // Set the canvas height to a fixed size
-    const ctx = canvas.getContext("2d");
-    if(input.pets !== undefined){
-      let loadedImages = 0;
-      input.pets.forEach((pet, index) => {
-        const img = new Image();
-        img.onload = function() {
-          ctx.drawImage(img, index * 200, 0, 200, 200); // Draw each pet image at a different position on the canvas
-          loadedImages++;
-          if (loadedImages === input.pets.length) {
-            canvas.style.display = "block"; // Make the canvas visible after all pet images have been drawn
-          }
-        };
-        img.src = pet.image;
-      });
-    } else {
-      canvas.style.display = "none"; // Hide the canvas if there are no pets to display
-    }
-
-    const resultsContainer = document.getElementById("results");
-    resultsContainer.style.display = resultsContainer.style.display === "none" ? "block" : "none";
-    const questionsContainer = document.getElementById("questions");
-    questionsContainer.style.display = "none"; // Add this line to hide the questions container
-  };
-  xmlhttp.open("GET", "profile.json", true);
-  xmlhttp.send();
-}
-
-    </script>
+<script src="index.js"></script>
 
 </body>
 </html>

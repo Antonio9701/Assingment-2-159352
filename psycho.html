@@ -3,110 +3,12 @@
 <html lang="en">
 <head>
   <title>Personality Test</title>
-  <style>
-    body {
-      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background: #F3F3F3;
-    }
-
-    h1, h3 {
-      color: #444;
-    }
-
-    table {
-      width: 100%;
-      margin: 20px 0;
-      border-collapse: collapse;
-    }
-
-    td {
-      padding: 10px;
-      border: 1px solid #CCC;
-      background: #FFF;
-    }
-
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #CCC;
-      border-radius: 4px;
-      box-sizing: border-box;
-      transition: border-color .3s;
-    }
-
-    input[type="text"]:focus, textarea:focus {
-      border-color: #66AFE9;
-      outline: none;
-    }
-
-    input[type="submit"], input[type="reset"] {
-      display: inline-block;
-      margin: 10px 0;
-      color: #FFF;
-      background-color: #007BFF;
-      border-color: #007BFF;
-      padding: 10px 20px;
-      text-decoration: none;
-      border-radius: 4px;
-      transition: background-color .3s, border-color .3s;
-    }
-
-    input[type="submit"]:hover, input[type="reset"]:hover {
-      background-color: #0056b3;
-      border-color: #004C98;
-    }
-
-    li {
-      margin: 10px 0;
-    }
-
-    textarea {
-      resize: vertical;
-    }
-
-    ul, ol {
-  padding: 0;
-  list-style: none;
-}
-
-li {
-  padding: 15px 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid #007BFF;
-  border-radius: 5px;
-  margin-bottom: 10px;
-}
-
-input[type=radio] {
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #007BFF;
-  border-radius: 50%;
-  outline: none;
-  transition-duration: 0.3s;
-  cursor: pointer;
-  margin: 0 5px;
-  box-shadow: 0 2px 5px 0 rgba(0,0,0,.2);
-}
-
-input[type=radio]:checked {
-  background: #007BFF;
-}
-  </style>
-
+  <link rel="stylesheet" href="psycho.css">
 </head>
 <body>
 <h1>Online Personality Test<br>
 </h1>
-
-<!-- Set the appropriate action -->
-<!--<form method="post" action="/analysis" name="">-->
 <form method="post" action="/analysis" name="">
-
-
 <p><input type="submit" name="submit" value="Submit">
 <input type="reset" name="reset" value="Clear"> </p>
 
@@ -146,46 +48,15 @@ input[type=radio]:checked {
 </tr>
 </table>
 
-<p><hr noshade size=2>
+
 
 <p><h3>I see myself as someone who ...</h3>
 
 <ol>
-<script>
-function putquestion(txt, qno)
-{
-  document.write("<li><b> ... " + txt + "</b><br>")
-  document.write("Disagree")
-  document.write("&nbsp <input type=radio name=question[" + qno + "] value=1 checked>1")
-  for (i=2; i<=5; i++) {
-    document.write("&nbsp <input type=radio name=question[" + qno + "] value=" + i + ">" + i)
-  }
-  document.write("&nbsp Agree")
-}
-putquestion("is talkative", 1)
-putquestion("does a thorough job", 2)
-putquestion("is original, comes up with new ideas", 3)
-putquestion("is helpful, unselfish with others", 4)
-putquestion("can be somewhat careless", 5)
-putquestion("is relaxed, handles stress well", 6)
-putquestion("is curious about many things", 7)
-putquestion("is full of energy", 8)
-putquestion("starts quarrels with others", 9)
-putquestion("is a reliable worker", 10)
-putquestion("is a deep thinker", 11)
-putquestion("tends to be disorganized", 12)
-putquestion("worries a lot", 13)
-putquestion("tends to be quiet", 14)
-putquestion("tends to be lazy", 15)
-putquestion("sometimes shy", 16)
-putquestion("is sometimes rude to others", 17)
-putquestion("tends to find fault with others", 18)
-putquestion("gets nervous easily", 19)
-putquestion("likes to work in a team", 20)
-</script>
+<script src="psycho.js"> </script>
 </ol>
 
-<p><hr noshade size=2>
+
 
 <p><b>Which of these jobs would be most appealing to you?</b><br/>
   <label>
@@ -199,7 +70,7 @@ putquestion("likes to work in a team", 20)
     </select>
   </label>
 
-  <p><hr noshade size=2>
+
 
 <p><b>Which of these animals would appeal to you as a pet?</b><br/>
   <label>
