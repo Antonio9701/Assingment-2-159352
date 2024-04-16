@@ -3,23 +3,45 @@ import os
 import socket
 import _thread
 import sys
+from typing import List, Dict, Optional, Any
+
 import requests
 
-hsep = '\r\n'
+http_separator = '\r\n'
 
 
-def parse_http(request):
-    reqline = request.decode().split(hsep).pop(0)
+class HTTPrequest:
+
+    def __init__(self, cmd, path, headers, payload):
+        self.cmd = cmd
+        self.path = path
+        self.headers = headers
+        self.payload = payload
+
+
+def parse_http_request(request):
+    # Parses the http_request inorder to use later
+    headers = request.decode().split('\r\n')
+    reqline = headers.pop(0)
+    payload = headers.pop()
+    headers_dict = {}
+
+    for header in headers:
+        if header != '':
+            k, v = header.split(': ')
+            headers_dict[k] = v
     try:
         cmd, path, prot = reqline.split()
     except ValueError:
         cmd = ''
         path = ''
-    return cmd, path
+        payload = ''
+
+    return HTTPrequest(cmd, path, headers_dict, payload)
 
 
 def http_status(connection, status):
-    connection.send(('HTTP/1.1 ' + status + hsep).encode())
+    connection.send(('HTTP/1.1 ' + status + http_separator).encode())
 
 
 def deliver_200(connection):
@@ -31,15 +53,15 @@ def deliver_404(connection):
 
 
 def http_header(connection, headerline):
-    connection.send((headerline + hsep).encode())
+    connection.send((headerline + http_separator).encode())
 
 
 def http_body(connection, payload):
-    connection.send(hsep.encode())
+    connection.send(http_separator.encode())
     connection.send(payload)
 
 
-def gobble_file(filename, binary=False):
+def read_file(filename, binary=False):
     if binary:
         mode = 'rb'
     else:
@@ -51,33 +73,47 @@ def gobble_file(filename, binary=False):
 
 def deliver_html(connection, filename):
     deliver_200(connection)
-    content = gobble_file(filename)
+    content = read_file(filename)
     http_header(connection, 'Content-Type: text/html')
     http_body(connection, content.encode())
 
 
+def deliver_gif(connection, filename):
+    # Deliver content of GIF image file
+    content = read_file(filename, binary=True)
+    deliver_200(connection)
+    http_header(connection, 'Content-Type: image/gif')
+    http_header(connection, 'Accept-Ranges: bytes')
+    http_body(connection, content)
+
+
 def deliver_jpg(connection, filename):
     deliver_200(connection)
-    content = gobble_file(filename, binary=True)
+    content = read_file(filename, binary=True)
     http_header(connection, 'Content-Type: image/jpg')
     http_header(connection, 'Accept-Ranges: bytes')
     http_body(connection, content)
 
 
-def deliver_json_string(connection, jsonstr):
+def deliver_json_string(connection, jsons):
     deliver_200(connection)
     http_header(connection, 'Content-Type: application/json')
-    http_body(connection, jsonstr.encode())
+    http_body(connection, jsons.encode())
 
 
 def deliver_json(connection, filename):
-    content = gobble_file(filename)
+    content = read_file(filename)
     deliver_json_string(connection, content)
+
+
+def load_data(filename: str) -> Dict[str, Any]:
+    with open(filename) as f:
+        return json.load(f)
 
 
 def parse_form_data(request):
     # Split the request into headers and body
-    headers, body = request.decode().split(hsep + hsep, 1)
+    headers, body = request.decode().split(http_separator + http_separator, 1)
 
     # Parse the form data
     parsed_form_data = {}
@@ -98,11 +134,12 @@ def parse_form_data(request):
         else:
             parsed_form_data[question] = answer
 
-    with open("input.json", "w") as file:
-        json.dump(parsed_form_data, file)
+
+def extract_responses(data: Dict[str, Any]) -> Dict[str, int]:
+    return {k: v for k, v in data.items() if isinstance(v, int)}
 
 
-def calculate_job_scores(responses, job_scores):
+def calculate_job_scores(responses: Dict[str, int], job_scores: Dict[str, List[int]]) -> Dict[str, int]:
     job_scores_total = {}
     for job, scores in job_scores.items():
         total = sum(responses.get(str(i), 0) * score for i, score in enumerate(scores, 1))
@@ -110,60 +147,74 @@ def calculate_job_scores(responses, job_scores):
     return job_scores_total
 
 
-def determine_best_job(job_scores_total):
+def determine_best_job(job_scores_total: Dict[str, int]) -> str:
     return max(job_scores_total, key=job_scores_total.get)
 
 
-def calculate_suitability(desired_job, job_scores_total):
+def calculate_suitability(desired_job: str, job_scores_total: Dict[str, int]) -> int:
     return sum(1 for total in job_scores_total.values() if total > job_scores_total[desired_job])
 
 
-def fetch_movie_data(desired_job, apis):
+def load_job_scores() -> Dict[str, List[int]]:
+    return {
+        "ceo": [1, 2, 4, 1, 1, 4, 1, 2, 4, 1, 3, 1, 3, 2, 4, 3, 4, 4, 1, 1],
+        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 3, 2, 4, 2, 2, 4, 3],
+        "doctor": [2, 3, 3, 3, 1, 3, 2, 3, 2, 4, 1, 2, 3, 3, 2, 3, 2, 2, 4, 3],
+        "model": [2, 1, 2, 1, 2, 2, 3, 2, 1, 1, 3, 2, 3, 3, 4, 2, 4, 3, 1, 1],
+        "rockstar": [3, 2, 3, 2, 2, 2, 3, 2, 2, 2, 1, 2, 2, 2, 3, 2, 3, 2, 2, 2],
+        "refuse": [1, 1, 1, 3, 3, 3, 3, 3, 1, 1, 4, 3, 3, 4, 1, 3, 3, 1, 3, 3]
+    }
+
+
+def fetch_data(uri: str) -> Optional[Dict[str, Any]]:
+    response = requests.get(uri)
+    if response.ok:
+        return response.json()
+    return None
+
+
+def fetch_movie_data(desired_job: str, apis: Dict[str, str]) -> Optional[Dict[str, Any]]:
     movie_uri = apis.get(desired_job)
     if movie_uri:
-        response = requests.get(movie_uri)
-        return json.loads(response.text)
-    else:
-        return None
+        return fetch_data(movie_uri)
+    return None
 
 
-def download_pet_images(data, apis):
+def download_image(uri: str) -> Optional[str]:
+    response = requests.get(uri)
+    if response.ok:
+        filename = os.path.basename(uri)
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        return filename
+    return None
+
+
+def download_pet_images(pets: List[str], apis: Dict[str, str]) -> List[Dict[str, str]]:
     pet_images = []
-    for pet in data.get("pets", []):
+    for pet in pets:
         uri = apis.get(pet)
         if uri:
-            response = requests.get(uri)
-            image_data = json.loads(response.text)
-            if pet == 'dog':
-                image_uri = image_data.get('message')
-            elif pet == 'cat':
-                image_uri = image_data[0].get('url')
-            else:
-                image_uri = image_data.get('url')
-            if image_uri:
-                response = requests.get(image_uri)
-                filename = os.path.basename(image_uri)
-                with open(filename, "wb") as f:
-                    f.write(response.content)
-                pet_images.append({"name": pet, "image": filename})
+            image_data = fetch_data(uri)
+            if image_data:
+                if pet == 'dog':
+                    image_uri = image_data.get('message')
+                elif pet == 'cat':
+                    image_uri = image_data[0].get('url')
+                else:
+                    image_uri = image_data.get('url')
+                if image_uri:
+                    filename = download_image(image_uri)
+                    if filename:
+                        pet_images.append({"name": pet, "image": filename})
     return pet_images
 
 
-def analyze():
-    with open('input.json') as f:
-        data = json.load(f)
-
-    responses = {k: v for k, v in data.items() if isinstance(v, int)}
-
-    job_scores = {
-        "ceo": [1, 2, 4, 1, 1, 4, 1, 1, 4, 1, 3, 1, 3, 1, 4, 3, 4, 4, 1, 1],
-        "astronaut": [1, 3, 2, 2, 1, 3, 3, 2, 1, 4, 1, 2, 4, 4, 2, 4, 2, 2, 4, 3],
-        "doctor": [2, 3, 4, 5, 1, 5, 2, 5, 2, 4, 1, 2, 4, 4, 2, 3, 2, 2, 4, 4],
-        "model": [2, 1, 2, 1, 3, 1, 3, 2, 1, 1, 3, 2, 3, 3, 4, 1, 4, 3, 1, 1],
-        "rockstar": [3, 2, 3, 1, 3, 1, 3, 3, 2, 2, 1, 2, 1, 1, 3, 1, 3, 2, 1, 2],
-        "refuse": [1, 1, 1, 2, 4, 2, 2, 4, 2, 1, 4, 4, 4, 4, 1, 4, 2, 1, 3, 3],
-    }
-
+def analyze(data_filename: str, profile_filename: str):
+    data = load_data(data_filename)
+    responses = extract_responses(data)
+    job_scores = load_job_scores()
+    desired_job = data.get('job')
     apis = {
         "dog": "https://dog.ceo/api/breeds/image/random",
         "cat": "https://api.thecatapi.com/v1/images/search",
@@ -178,10 +229,9 @@ def analyze():
 
     job_scores_total = calculate_job_scores(responses, job_scores)
     best_job = determine_best_job(job_scores_total)
-    desired_job = data.get('job')
     suitability = calculate_suitability(desired_job, job_scores_total)
     movie_data = fetch_movie_data(desired_job, apis)
-    pet_images = download_pet_images(data, apis)
+    pet_images = download_pet_images(data.get("pets", []), apis)
 
     profile = {
         'desired_job': desired_job,
@@ -191,7 +241,7 @@ def analyze():
         'pets': pet_images
     }
 
-    with open("profile.json", "w") as file:
+    with open(profile_filename, "w") as file:
         json.dump(profile, file)
 
 
@@ -219,7 +269,8 @@ def authenticate(connection, request):
 def do_request(connectionSocket):
     # Extract just the HTTP command (method) and path from the request
     request = connectionSocket.recv(20240)
-    cmd, path = parse_http(request)
+    http_request = parse_http_request(request)
+    cmd, path = http_request.cmd, http_request.path
 
     if cmd == 'GET':
         sign_in_status = authenticate(connectionSocket, request)
@@ -245,7 +296,7 @@ def do_request(connectionSocket):
         if sign_in_status:
             if path == '/analysis':
                 parse_form_data(request)
-                analyze()
+                analyze('input.json', 'profile.json')
                 deliver_200(connectionSocket)
             else:
                 deliver_404(connectionSocket)

@@ -1,10 +1,8 @@
 # Use an official Python runtime as a parent image
 FROM python:3.12
 
-# Setting environment variable for Python to not write .pyc files to disk
+# Setting environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1
-
-# Setting environment variable for Python to not spam the container with unnecessary output
 ENV PYTHONUNBUFFERED 1
 
 # Set working directory
@@ -15,7 +13,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
 # Copy the current directory contents into the container at /app
-COPY venv /app
+COPY . /app
 
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
